@@ -1,6 +1,7 @@
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
+const os = require('os');
 const contentController = require('../controllers/contentController');
 const { protect } = require('../middleware/authMiddleware');
 const queryHelper = require('../middleware/query');
@@ -8,15 +9,8 @@ const { ContentItem } = require('../models');
 
 const router = express.Router();
 
-// Multer config
-const storage = multer.diskStorage({
-  destination: './uploads/',
-  filename: (req, file, cb) => {
-    const ext = path.extname(file.originalname);
-    cb(null, file.originalname + Date.now() + ext);
-  }
-});
-const upload = multer({ storage });
+// Multer config: use memory storage to avoid EROFS on Vercel
+const upload = multer({ storage: multer.memoryStorage() });
 
 // Basic CRUD routes
 router.route('/')

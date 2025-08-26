@@ -1,7 +1,6 @@
 const asyncHandler = require('express-async-handler');
 const { ContentItem } = require('../models');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
-const fs = require('fs');
+const { uploadToCloudinary, uploadBufferToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
@@ -16,8 +15,8 @@ exports.createContent = asyncHandler(async (req, res) => {
   logger.info(`Received ${files.length} files for upload: ${files.map(f => f.originalname).join(', ')}`);
 
   for (const file of files) {
-    const result = await uploadToCloudinary(file.path);
-    fs.unlinkSync(file.path);
+    // Use buffer upload in serverless envs
+    const result = await uploadBufferToCloudinary(file.buffer);
     if (file.mimetype.startsWith('image/')) images.push(result.secure_url);
     else if (file.mimetype.startsWith('video/')) videos.push(result.secure_url);
   }
@@ -81,8 +80,7 @@ exports.updateContent = asyncHandler(async (req, res) => {
   const images = [], videos = [];
   const files = req.files || [];
   for (const file of files) {
-    const result = await uploadToCloudinary(file.path);
-    fs.unlinkSync(file.path);
+    const result = await uploadBufferToCloudinary(file.buffer);
     if (file.mimetype.startsWith('image/')) images.push(result.secure_url);
     else if (file.mimetype.startsWith('video/')) videos.push(result.secure_url);
   }

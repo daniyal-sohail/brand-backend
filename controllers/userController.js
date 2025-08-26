@@ -3,8 +3,7 @@ const { User, CanvaAccessRequest } = require('../models');
 const ApiResponse = require('../utils/ApiResponse');
 const ApiError = require('../utils/ApiError');
 const logger = require('../utils/logger');
-const { uploadToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
-const fs = require('fs');
+const { uploadToCloudinary, uploadBufferToCloudinary, deleteFromCloudinary } = require('../utils/cloudinary');
 
 // Get user profile
 exports.getProfile = asyncHandler(async (req, res) => {
@@ -27,7 +26,7 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 
     if (req.file) {
         try {
-            const result = await uploadToCloudinary(req.file.path, 'profile-images');
+            const result = await uploadBufferToCloudinary(req.file.buffer, 'profile-images', req.file.mimetype);
 
             const currentUser = await User.findById(req.user.id);
 
@@ -38,13 +37,8 @@ exports.updateProfile = asyncHandler(async (req, res) => {
 
             updateData.profileImage = result.secure_url;
 
-            fs.unlinkSync(req.file.path);
-
             logger.info('Profile image uploaded', { userId: req.user.id, imageUrl: result.secure_url });
         } catch (error) {
-            if (req.file && fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
-            }
             logger.error('Profile image upload failed', { userId: req.user.id, error: error.message });
             throw new ApiError(500, 'Failed to upload profile image');
         }

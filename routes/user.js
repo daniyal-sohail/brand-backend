@@ -20,17 +20,9 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/authMiddleware');
 
-// Multer config for profile images
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, 'profile-' + Date.now() + ext);
-    }
-});
-
+// Multer memory storage to avoid EROFS on serverless
 const upload = multer({
-    storage,
+    storage: multer.memoryStorage(),
     limits: {
         fileSize: 5 * 1024 * 1024 // 5MB limit
     },

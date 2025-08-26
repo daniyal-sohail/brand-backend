@@ -1,4 +1,6 @@
-require('dotenv').config();
+if (process.env.NODE_ENV !== 'production') {
+  require('dotenv').config();
+}
 const express = require('express');
 const logger = require('./utils/logger');
 const helmet = require('helmet');
@@ -26,7 +28,9 @@ connectDB();
 // ─── Security Headers ─────────────────────────────────────────────
 app.use(helmet());
 
-// ─── Test Route ───────────────────────────────────────────────────
+// ─── Health & Misc ────────────────────────────────────────────────
+app.get('/favicon.ico', (req, res) => res.status(204).end());
+// Test/health route
 app.get('/test', (req, res) => {
   res.status(200).json({
     message: 'Server is running!',
@@ -130,33 +134,5 @@ app.use('/api', routes);
 app.all('*', undefinedRouteHandler);
 app.use(globalErrorHandler);
 
-// ─── Start Server ─────────────────────────────────────────────────
-const PORT = process.env.PORT || 5000;
-const BASE_URL = process.env.BASE_URL || 'http://localhost';
-
-// Only start the server if we're not on Vercel (serverless)
-if (process.env.NODE_ENV !== 'production' || !process.env.VERCEL) {
-  const server = app.listen(PORT, () =>
-    console.log(`Server running on ${BASE_URL}:${PORT}`)
-  );
-
-  // ─── Graceful Shutdown ────────────────────────────────────────────
-  process.on('unhandledRejection', (err) => {
-    logger.error('UNHANDLED REJECTION! Shutting down...', {
-      name: err.name,
-      message: err.message,
-      stack: err.stack
-    });
-    server.close(() => process.exit(1));
-  });
-
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM RECEIVED. Shutting down gracefully');
-    server.close(() => {
-      logger.info('Process terminated!');
-    });
-  });
-}
-
-// Export the app for Vercel
+// Export the app for serverless platforms (no app.listen here)
 module.exports = app;

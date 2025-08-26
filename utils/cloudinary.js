@@ -6,11 +6,24 @@ cloudinary.config({
 });
 const uploadToCloudinary = async (filePath, folder = 'Brand-appeal') => {
   console.log(`Uploading file to Cloudinary: ${filePath}`);
-  // console.log(`${filePath.split('/').pop().split('.')[0]}`);
-  // console.log(`${filePath}`);
   return await cloudinary.uploader.upload(filePath, {
     folder,
     resource_type: 'auto'
+  });
+};
+
+// Upload a Buffer using upload_stream (for serverless/memory uploads)
+const uploadBufferToCloudinary = (buffer, folder = 'Brand-appeal', mimetype = 'application/octet-stream') => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder, resource_type: 'auto' },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
+      }
+    );
+    // Write buffer to the stream
+    stream.end(buffer);
   });
 };
 const deleteFromCloudinary = async (publicId, resource_type = 'image') => {
@@ -19,4 +32,4 @@ const deleteFromCloudinary = async (publicId, resource_type = 'image') => {
   const result = await cloudinary.uploader.destroy(fullPublicId, { resource_type });
   console.log(`Delete result: ${JSON.stringify(result)}`);
 };
-module.exports = { uploadToCloudinary, deleteFromCloudinary };
+module.exports = { uploadToCloudinary, uploadBufferToCloudinary, deleteFromCloudinary };
