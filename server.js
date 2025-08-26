@@ -128,7 +128,11 @@ if (require('fs').existsSync(frontendPath)) {
 
 // ─── Routes ───────────────────────────────────────────────────────
 const routes = require('./routes/index');
+const authRoutes = require('./routes/auth');
+// Primary mount at /api
 app.use('/api', routes);
+// Alias to support frontend calling /auth/* directly (without /api)
+app.use('/auth', authRoutes);
 
 // ─── 404 & Global Error Handlers ──────────────────────────────────
 app.all('*', undefinedRouteHandler);
