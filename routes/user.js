@@ -20,14 +20,8 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/authMiddleware');
 
-// Multer config for profile images
-const storage = multer.diskStorage({
-    destination: './uploads/',
-    filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, 'profile-' + Date.now() + ext);
-    }
-});
+// Multer config for profile images - using memory storage for serverless compatibility
+const storage = multer.memoryStorage();
 
 const upload = multer({
     storage,

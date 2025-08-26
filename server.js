@@ -29,6 +29,7 @@ process.on('uncaughtException', (err) => {
 console.log('Express app initialized');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT);
+console.log('Vercel:', process.env.VERCEL ? 'Yes' : 'No');
 
 // Connect to database (but don't block the app startup)
 connectDB().catch(err => {
@@ -51,7 +52,7 @@ app.get('/test', (req, res) => {
 
 // ─── CORS ─────────────────────────────────────────────────────────
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production' 
+  origin: process.env.NODE_ENV === 'production'
     ? [process.env.FRONTEND_URL, process.env.ALLOWED_ORIGIN].filter(Boolean)
     : "*",
   credentials: true,
@@ -96,9 +97,9 @@ app.use((req, res, next) => {
 });
 
 // ─── Static Files ─────────────────────────────────────────────────
-// Only serve static files if the frontend directory exists
+// Only serve static files if the frontend directory exists and we're not on Vercel
 const frontendPath = path.join(__dirname, '../frontend');
-if (require('fs').existsSync(frontendPath)) {
+if (require('fs').existsSync(frontendPath) && !process.env.VERCEL) {
   app.use(express.static('frontend'));
 
   app.get('/stripe', (req, res) => {
@@ -116,6 +117,8 @@ if (require('fs').existsSync(frontendPath)) {
       message: 'Brand Appeal Backend API is running',
       version: '1.0.0',
       timestamp: new Date().toISOString(),
+      environment: process.env.NODE_ENV || 'development',
+      vercel: process.env.VERCEL ? true : false,
       endpoints: {
         health: '/api/health',
         auth: '/api/auth',
