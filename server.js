@@ -18,13 +18,28 @@ const connectDB = require('./config/database');
 
 // Initialize
 const app = express();
+
+// Add basic error handling for uncaught exceptions
+process.on('uncaughtException', (err) => {
+  console.error('UNCAUGHT EXCEPTION! Shutting down...');
+  console.error(err.name, err.message);
+  process.exit(1);
+});
+
 console.log('Express app initialized');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT);
-connectDB();
+
+// Connect to database (but don't block the app startup)
+connectDB().catch(err => {
+  console.error('Database connection failed:', err.message);
+});
 
 // ─── Security Headers ─────────────────────────────────────────────
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // Disable CSP for API
+  crossOriginEmbedderPolicy: false
+}));
 
 // ─── Test Route ───────────────────────────────────────────────────
 app.get('/test', (req, res) => {
@@ -36,7 +51,9 @@ app.get('/test', (req, res) => {
 
 // ─── CORS ─────────────────────────────────────────────────────────
 app.use(cors({
-  origin: "*",
+  origin: process.env.NODE_ENV === 'production' 
+    ? [process.env.FRONTEND_URL, process.env.ALLOWED_ORIGIN].filter(Boolean)
+    : "*",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -48,26 +65,23 @@ app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser());
 
-
-
 // ─── Data Sanitization ────────────────────────────────────────────
 app.use(mongoSanitize());
 app.use(xss());
 app.use(hpp({ whitelist: [] }));
 
 // ─── Rate Limiting ────────────────────────────────────────────────
-app.use('/api', rateLimit({
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
-  windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15) * 60 * 1000,
-  message: 'Too many requests from this IP, please try again later!',
-  standardHeaders: true,
-  legacyHeaders: false,
-  trustProxy: true
-}));
-
-
-
-
+// Only apply rate limiting if not in development
+if (process.env.NODE_ENV !== 'development') {
+  app.use('/api', rateLimit({
+    max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100,
+    windowMs: (parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15) * 60 * 1000,
+    message: 'Too many requests from this IP, please try again later!',
+    standardHeaders: true,
+    legacyHeaders: false,
+    trustProxy: true
+  }));
+}
 
 // ─── Compression ──────────────────────────────────────────────────
 app.use(compression());
@@ -80,8 +94,6 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-
 
 // ─── Static Files ─────────────────────────────────────────────────
 // Only serve static files if the frontend directory exists
@@ -119,8 +131,6 @@ if (require('fs').existsSync(frontendPath)) {
     });
   });
 }
-
-
 
 // ─── Routes ───────────────────────────────────────────────────────
 const routes = require('./routes/index');

@@ -11,7 +11,7 @@ const logFormat = winston.format.combine(
 
 // Create the logger instance
 const logger = winston.createLogger({
-  level: process.env.nodeEnv === 'development' ? 'debug' : 'info',
+  level: process.env.NODE_ENV === 'development' ? 'debug' : 'info',
   format: logFormat,
   defaultMeta: { service: 'Brand-appeal' },
   transports: [
@@ -26,16 +26,19 @@ const logger = winston.createLogger({
   ]
 });
 
-// Add file transport only in non-serverless s
-// This is the key change - we don't try to write to the filesystem in Vercel
-if (process.env.NODE_ENV !== 'production' && !process.env.VERCEL) {
-  logger.add(new winston.transports.File({
-    filename: 'logs/error.log',
-    level: 'error'
-  }));
-  logger.add(new winston.transports.File({
-    filename: 'logs/combined.log'
-  }));
+// Only add file transports in development and non-serverless environments
+if (process.env.NODE_ENV === 'development' && !process.env.VERCEL) {
+  try {
+    logger.add(new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error'
+    }));
+    logger.add(new winston.transports.File({
+      filename: 'logs/combined.log'
+    }));
+  } catch (error) {
+    console.warn('Could not add file transports:', error.message);
+  }
 }
 
 module.exports = logger;
