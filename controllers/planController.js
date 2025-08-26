@@ -3,7 +3,7 @@ const Stripe = require('stripe');
 const asyncHandler = require('express-async-handler');
 const ApiError = require('../utils/ApiError');
 const ApiResponse = require('../utils/ApiResponse');
-const { createOrGetStripePriceId } = require('../utils/stripeUtils');
+const { createOrGetStripePriceId } = require('../utils/StripeUtils');
 
 // 🆕 Create plan (admin)
 exports.createPlan = asyncHandler(async (req, res) => {
