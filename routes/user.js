@@ -38,6 +38,9 @@ const upload = multer({
     }
 });
 
+// Fingerprint log to verify deployed build
+console.log('User routes: using multer memoryStorage for profile uploads');
+
 // All routes are protected (require authentication)
 router.use(protect);
 

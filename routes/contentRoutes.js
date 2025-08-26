@@ -12,6 +12,9 @@ const router = express.Router();
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
+// Fingerprint log to verify deployed build
+console.log('Content routes: using multer memoryStorage for media uploads');
+
 // Basic CRUD routes
 router.route('/')
   .get(queryHelper(ContentItem))
