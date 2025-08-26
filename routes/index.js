@@ -18,20 +18,6 @@ router.get('/health', (req, res) => {
   res.status(200).json({
     status: 'success',
     message: 'API is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
-    version: '1.0.0',
-    uptime: process.uptime(),
-    memory: process.memoryUsage(),
-    database: process.env.MONGO_URI ? 'configured' : 'not configured'
-  });
-});
-
-// Simple test endpoint
-router.get('/test', (req, res) => {
-  res.status(200).json({
-    status: 'success',
-    message: 'Test endpoint working',
     timestamp: new Date().toISOString()
   });
 });

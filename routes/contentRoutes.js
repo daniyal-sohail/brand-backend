@@ -8,12 +8,15 @@ const { ContentItem } = require('../models');
 
 const router = express.Router();
 
-// Multer config - using memory storage for serverless compatibility
-const storage = multer.memoryStorage();
+// Multer config
+const storage = multer.diskStorage({
+  destination: './uploads/',
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, file.originalname + Date.now() + ext);
+  }
+});
 const upload = multer({ storage });
-
-// Fingerprint log to verify deployed build
-console.log('Content routes: using multer memoryStorage for media uploads');
 
 // Basic CRUD routes
 router.route('/')

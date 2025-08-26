@@ -16,7 +16,8 @@ exports.createContent = asyncHandler(async (req, res) => {
   logger.info(`Received ${files.length} files for upload: ${files.map(f => f.originalname).join(', ')}`);
 
   for (const file of files) {
-    const result = await uploadToCloudinary(file);
+    const result = await uploadToCloudinary(file.path);
+    fs.unlinkSync(file.path);
     if (file.mimetype.startsWith('image/')) images.push(result.secure_url);
     else if (file.mimetype.startsWith('video/')) videos.push(result.secure_url);
   }
@@ -80,7 +81,8 @@ exports.updateContent = asyncHandler(async (req, res) => {
   const images = [], videos = [];
   const files = req.files || [];
   for (const file of files) {
-    const result = await uploadToCloudinary(file);
+    const result = await uploadToCloudinary(file.path);
+    fs.unlinkSync(file.path);
     if (file.mimetype.startsWith('image/')) images.push(result.secure_url);
     else if (file.mimetype.startsWith('video/')) videos.push(result.secure_url);
   }

@@ -5,15 +5,7 @@
             "src": "server.js",
             "use": "@vercel/node",
             "config": {
-                "maxDuration": 30,
-                "includeFiles": [
-                    "middleware/**",
-                    "models/**",
-                    "routes/**",
-                    "utils/**",
-                    "config/**",
-                    "services/**"
-                ]
+                "maxDuration": 30
             }
         }
     ],
@@ -26,13 +18,5 @@
             "src": "/(.*)",
             "dest": "/server.js"
         }
-    ],
-    "env": {
-        "NODE_ENV": "production"
-    },
-    "functions": {
-        "server.js": {
-            "maxDuration": 30
-        }
-    }
+    ]
 }

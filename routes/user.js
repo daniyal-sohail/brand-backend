@@ -20,8 +20,14 @@ const {
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/authMiddleware');
 
-// Multer config for profile images - using memory storage for serverless compatibility
-const storage = multer.memoryStorage();
+// Multer config for profile images
+const storage = multer.diskStorage({
+    destination: './uploads/',
+    filename: (req, file, cb) => {
+        const ext = path.extname(file.originalname);
+        cb(null, 'profile-' + Date.now() + ext);
+    }
+});
 
 const upload = multer({
     storage,
@@ -37,9 +43,6 @@ const upload = multer({
         }
     }
 });
-
-// Fingerprint log to verify deployed build
-console.log('User routes: using multer memoryStorage for profile uploads');
 
 // All routes are protected (require authentication)
 router.use(protect);

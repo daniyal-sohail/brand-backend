@@ -10,23 +10,8 @@ const connectDB = async () => {
             return;
         }
 
-        // Check if already connected
-        if (mongoose.connection.readyState === 1) {
-            logger.info('MongoDB already connected');
-            return;
-        }
-
-        console.log('Connecting to MongoDB...');
-        
-        const conn = await mongoose.connect(process.env.MONGO_URI, {
-            maxPoolSize: 10, // Maintain up to 10 socket connections
-            serverSelectionTimeoutMS: 5000, // Keep trying to send operations for 5 seconds
-            socketTimeoutMS: 45000, // Close sockets after 45 seconds of inactivity
-            bufferMaxEntries: 0, // Disable mongoose buffering
-            bufferCommands: false, // Disable mongoose buffering
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
+        console.log('Connecting to MongoDB...', process.env.MONGO_URI);
+        const conn = await mongoose.connect(process.env.MONGO_URI);
 
         logger.info(`MongoDB Connected: ${conn.connection.host}`);
 
@@ -45,7 +30,6 @@ const connectDB = async () => {
         mongoose.connection.on('reconnected', () => {
             logger.info('MongoDB reconnected');
         });
-
         // Handle process termination
         process.on('SIGINT', async () => {
             try {
@@ -70,5 +54,4 @@ const connectDB = async () => {
         logger.warn('Continuing without database connection');
     }
 };
-
 module.exports = connectDB;
