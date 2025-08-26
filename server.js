@@ -136,3 +136,28 @@ app.use(globalErrorHandler);
 
 // Export the app for serverless platforms (no app.listen here)
 module.exports = app;
+
+// Start server only when running locally (not in Vercel serverless)
+if (require.main === module) {
+  const PORT = process.env.PORT || 5000;
+  const BASE_URL = process.env.BASE_URL || 'http://localhost';
+  const server = app.listen(PORT, () =>
+    console.log(`Server running on ${BASE_URL}:${PORT}`)
+  );
+
+  process.on('unhandledRejection', (err) => {
+    logger.error('UNHANDLED REJECTION! Shutting down...', {
+      name: err.name,
+      message: err.message,
+      stack: err.stack
+    });
+    server.close(() => process.exit(1));
+  });
+
+  process.on('SIGTERM', () => {
+    logger.info('SIGTERM RECEIVED. Shutting down gracefully');
+    server.close(() => {
+      logger.info('Process terminated!');
+    });
+  });
+}
