@@ -150,6 +150,9 @@ module.exports = app;
 if (require.main === module) {
   const startServer = async () => {
     try {
+      // Connect to database first
+      await connectDB();
+
       const PORT = process.env.PORT || 5000;
       const BASE_URL = process.env.BASE_URL || 'http://localhost';
       const server = app.listen(PORT, () =>
