@@ -19,10 +19,6 @@ const {
 } = require('../controllers/userController');
 const { protect } = require('../middleware/authMiddleware');
 const { adminOnly } = require('../middleware/authMiddleware');
-const { ensureDatabaseConnection } = require('../middleware/databaseMiddleware');
-
-// Apply database connection middleware to all user routes
-router.use(ensureDatabaseConnection);
 
 // Multer memory storage to avoid EROFS on serverless
 const upload = multer({

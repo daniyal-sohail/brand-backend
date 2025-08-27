@@ -8,10 +8,6 @@ const {
     resendVerification,
     checkVerificationStatus
 } = require('../controllers/authController');
-const { ensureDatabaseConnection } = require('../middleware/databaseMiddleware');
-
-// Apply database connection middleware to all auth routes
-router.use(ensureDatabaseConnection);
 
 // Authentication routes only
 router.post('/login', loginValidation, login);

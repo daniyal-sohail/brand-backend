@@ -16,21 +16,17 @@ const path = require('path');
 
 // Middleware
 const { globalErrorHandler, undefinedRouteHandler } = require('./middleware/errorMiddleware');
-const { connectDB } = require('./config/database');
+const connectDB = require('./config/database');
 
 // Initialize
 const app = express();
+
+// Trust proxy for rate limiting (fixes X-Forwarded-For warnings)
+app.set('trust proxy', 1);
+
 console.log('Express app initialized');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT);
-
-// Trust proxy for Vercel deployment
-app.set('trust proxy', 1);
-
-// Connect to database
-connectDB().catch(err => {
-  logger.error('Failed to connect to database:', err);
-});
 
 // ─── Security Headers ─────────────────────────────────────────────
 app.use(helmet());
@@ -47,7 +43,7 @@ app.get('/test', (req, res) => {
 
 // ─── CORS ─────────────────────────────────────────────────────────
 app.use(cors({
-  origin: "*",
+  origin: process.env.FRONTEND_URL || "*",
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
@@ -58,8 +54,6 @@ app.use('/stripe/webhook', stripeWebhookRoutes);
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
 app.use(cookieParser());
-
-
 
 // ─── Data Sanitization ────────────────────────────────────────────
 app.use(mongoSanitize());
@@ -73,16 +67,8 @@ app.use('/api', rateLimit({
   message: 'Too many requests from this IP, please try again later!',
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true,
-  // Add key generator to handle X-Forwarded-For properly
-  keyGenerator: (req) => {
-    return req.ip || req.connection.remoteAddress || 'unknown';
-  }
+  trustProxy: true
 }));
-
-
-
-
 
 // ─── Compression ──────────────────────────────────────────────────
 app.use(compression());
@@ -95,8 +81,6 @@ app.use((req, res, next) => {
   });
   next();
 });
-
-
 
 // ─── Static Files ─────────────────────────────────────────────────
 // Only serve static files if the frontend directory exists
@@ -135,8 +119,6 @@ if (require('fs').existsSync(frontendPath)) {
   });
 }
 
-
-
 // ─── Routes ───────────────────────────────────────────────────────
 const routes = require('./routes/index');
 app.use('/api', routes);
@@ -150,25 +132,40 @@ module.exports = app;
 
 // Start server only when running locally (not in Vercel serverless)
 if (require.main === module) {
-  const PORT = process.env.PORT || 5000;
-  const BASE_URL = process.env.BASE_URL || 'http://localhost';
-  const server = app.listen(PORT, () =>
-    console.log(`Server running on ${BASE_URL}:${PORT}`)
-  );
+  const startServer = async () => {
+    try {
+      // Connect to database first
+      await connectDB();
 
-  process.on('unhandledRejection', (err) => {
-    logger.error('UNHANDLED REJECTION! Shutting down...', {
-      name: err.name,
-      message: err.message,
-      stack: err.stack
-    });
-    server.close(() => process.exit(1));
-  });
+      const PORT = process.env.PORT || 5000;
+      const BASE_URL = process.env.BASE_URL || 'http://localhost';
+      const server = app.listen(PORT, () =>
+        console.log(`Server running on ${BASE_URL}:${PORT}`)
+      );
 
-  process.on('SIGTERM', () => {
-    logger.info('SIGTERM RECEIVED. Shutting down gracefully');
-    server.close(() => {
-      logger.info('Process terminated!');
-    });
-  });
+      process.on('unhandledRejection', (err) => {
+        logger.error('UNHANDLED REJECTION! Shutting down...', {
+          name: err.name,
+          message: err.message,
+          stack: err.stack
+        });
+        server.close(() => process.exit(1));
+      });
+
+      process.on('SIGTERM', () => {
+        logger.info('SIGTERM RECEIVED. Shutting down gracefully');
+        server.close(() => {
+          logger.info('Process terminated!');
+        });
+      });
+    } catch (error) {
+      logger.error('Failed to start server:', {
+        error: error.message,
+        stack: error.stack
+      });
+      process.exit(1);
+    }
+  };
+
+  startServer();
 }

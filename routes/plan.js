@@ -9,11 +9,7 @@ const {
 } = require('../controllers/planController');
 
 const { protect, adminOnly } = require('../middleware/authMiddleware');
-const { ensureDatabaseConnection } = require('../middleware/databaseMiddleware');
 const router = express.Router();
-
-// Apply database connection middleware to all plan routes
-router.use(ensureDatabaseConnection);
 
 router.post('/create-plan', protect, adminOnly, createPlan);
 router.patch('/update-plan/:id', protect, adminOnly, updatePlan);

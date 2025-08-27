@@ -6,12 +6,8 @@ const contentController = require('../controllers/contentController');
 const { protect } = require('../middleware/authMiddleware');
 const queryHelper = require('../middleware/query');
 const { ContentItem } = require('../models');
-const { ensureDatabaseConnection } = require('../middleware/databaseMiddleware');
 
 const router = express.Router();
-
-// Apply database connection middleware to all content routes
-router.use(ensureDatabaseConnection);
 
 // Multer config: use memory storage to avoid EROFS on Vercel
 const upload = multer({ storage: multer.memoryStorage() });
