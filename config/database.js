@@ -23,11 +23,23 @@ const connectDB = async () => {
         }
 
         if (!cached.promise) {
-            cached.promise = mongoose.connect(uri, {
+            const options = {
                 ...(dbName ? { dbName } : {}),
-                maxPoolSize: 10,
-                serverSelectionTimeoutMS: 5000
-            }).then((m) => m);
+                // Optimized for serverless environments
+                maxPoolSize: 1, // Reduce pool size for serverless
+                minPoolSize: 0, // Allow 0 connections when idle
+                serverSelectionTimeoutMS: 10000, // 10 seconds
+                socketTimeoutMS: 45000, // 45 seconds
+                // Connection timeout
+                connectTimeoutMS: 10000,
+                // Retry settings
+                retryWrites: true,
+                retryReads: true,
+                // For serverless environments
+                maxIdleTimeMS: 30000, // Close connections after 30 seconds of inactivity
+            };
+
+            cached.promise = mongoose.connect(uri, options).then((m) => m);
         }
         const conn = await cached.promise;
         cached.conn = conn;
@@ -40,15 +52,22 @@ const connectDB = async () => {
                 error: err.message,
                 stack: err.stack
             });
+            // Reset cached connection on error
+            cached.conn = null;
+            cached.promise = null;
         });
 
         mongoose.connection.on('disconnected', () => {
             logger.warn('MongoDB disconnected');
+            // Reset cached connection on disconnect
+            cached.conn = null;
+            cached.promise = null;
         });
 
         mongoose.connection.on('reconnected', () => {
             logger.info('MongoDB reconnected');
         });
+
         // Handle process termination
         process.on('SIGINT', async () => {
             try {
@@ -63,6 +82,8 @@ const connectDB = async () => {
                 process.exit(1);
             }
         });
+
+        return conn;
     } catch (error) {
         logger.error('Error connecting to MongoDB:', {
             error: error.message,
@@ -70,8 +91,30 @@ const connectDB = async () => {
             // Do not log full URI
             uri_present: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI)
         });
+        // Reset cached connection on error
+        cached.conn = null;
+        cached.promise = null;
         // Don't exit the process, just log the error
         logger.warn('Continuing without database connection');
+        throw error; // Re-throw to handle in calling code
     }
 };
-module.exports = connectDB;
+
+// Function to close database connection (useful for serverless)
+const closeDB = async () => {
+    try {
+        if (cached.conn) {
+            await mongoose.connection.close();
+            cached.conn = null;
+            cached.promise = null;
+            logger.info('MongoDB connection closed');
+        }
+    } catch (error) {
+        logger.error('Error closing MongoDB connection:', {
+            error: error.message,
+            stack: error.stack
+        });
+    }
+};
+
+module.exports = { connectDB, closeDB };

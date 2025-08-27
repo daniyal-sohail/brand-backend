@@ -16,14 +16,21 @@ const path = require('path');
 
 // Middleware
 const { globalErrorHandler, undefinedRouteHandler } = require('./middleware/errorMiddleware');
-const connectDB = require('./config/database');
+const { connectDB } = require('./config/database');
 
 // Initialize
 const app = express();
 console.log('Express app initialized');
 console.log('Environment:', process.env.NODE_ENV);
 console.log('Port:', process.env.PORT);
-connectDB();
+
+// Trust proxy for Vercel deployment
+app.set('trust proxy', 1);
+
+// Connect to database
+connectDB().catch(err => {
+  logger.error('Failed to connect to database:', err);
+});
 
 // ─── Security Headers ─────────────────────────────────────────────
 app.use(helmet());
@@ -66,7 +73,11 @@ app.use('/api', rateLimit({
   message: 'Too many requests from this IP, please try again later!',
   standardHeaders: true,
   legacyHeaders: false,
-  trustProxy: true
+  trustProxy: true,
+  // Add key generator to handle X-Forwarded-For properly
+  keyGenerator: (req) => {
+    return req.ip || req.connection.remoteAddress || 'unknown';
+  }
 }));
 
 
@@ -128,11 +139,7 @@ if (require('fs').existsSync(frontendPath)) {
 
 // ─── Routes ───────────────────────────────────────────────────────
 const routes = require('./routes/index');
-const authRoutes = require('./routes/auth');
-// Primary mount at /api
 app.use('/api', routes);
-// Alias to support frontend calling /auth/* directly (without /api)
-app.use('/auth', authRoutes);
 
 // ─── 404 & Global Error Handlers ──────────────────────────────────
 app.all('*', undefinedRouteHandler);
