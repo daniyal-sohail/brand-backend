@@ -2,14 +2,8 @@
 const mongoose = require('mongoose');
 const logger = require('../utils/logger');
 
-let cached = global.__mongoose_conn;
-if (!cached) {
-    cached = global.__mongoose_conn = { conn: null, promise: null };
-}
-
 const connectDB = async () => {
     try {
-        // Prefer MONGODB_URI, fallback to MONGO_URI
         const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
         const dbName = process.env.MONGODB_DB;
 
@@ -18,48 +12,17 @@ const connectDB = async () => {
             throw new Error('MongoDB URI not provided');
         }
 
-        if (cached.conn) {
-            logger.info('Using cached database connection');
-            return cached.conn;
-        }
+        // For serverless environments, don't cache connections
+        const options = {
+            ...(dbName ? { dbName } : {}),
+            maxPoolSize: 1, // Smaller pool for serverless
+            serverSelectionTimeoutMS: 5000,
+            socketTimeoutMS: 10000
+        };
 
-        if (!cached.promise) {
-            const options = {
-                ...(dbName ? { dbName } : {}),
-                maxPoolSize: 10,
-                serverSelectionTimeoutMS: 30000,
-                socketTimeoutMS: 45000
-            };
-
-            logger.info('Connecting to MongoDB...');
-            cached.promise = mongoose.connect(uri, options).then((m) => {
-                logger.info(`MongoDB Connected: ${m.connection.host}`);
-                return m;
-            });
-        }
-
-        const conn = await cached.promise;
-        cached.conn = conn;
-
-        // Handle errors after initial connection
-        mongoose.connection.on('error', err => {
-            logger.error('MongoDB connection error:', {
-                error: err.message,
-                stack: err.stack
-            });
-            cached.conn = null;
-            cached.promise = null;
-        });
-
-        mongoose.connection.on('disconnected', () => {
-            logger.warn('MongoDB disconnected');
-            cached.conn = null;
-            cached.promise = null;
-        });
-
-        mongoose.connection.on('reconnected', () => {
-            logger.info('MongoDB reconnected');
-        });
+        logger.info('Connecting to MongoDB...');
+        const conn = await mongoose.connect(uri, options);
+        logger.info(`MongoDB Connected: ${conn.connection.host}`);
 
         return conn;
     } catch (error) {
@@ -68,8 +31,6 @@ const connectDB = async () => {
             stack: error.stack,
             uri_present: Boolean(process.env.MONGODB_URI || process.env.MONGO_URI)
         });
-        cached.conn = null;
-        cached.promise = null;
         throw error;
     }
 };
